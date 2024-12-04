@@ -25,5 +25,20 @@ def start_chrome():
     # Close the browser
     driver.quit()
 
+def get_user_input():
+    # Prompt the user for input: origin, destination, and vacation length
+    origin = input("Enter origin airport code (e.g., JFK): ")
+    destination = input("Enter destination airport code (e.g., LAX): ")
+    vacation_days = int(input("Enter number of days for your vacation: "))
+    
+    return origin, destination, vacation_days
+
 if __name__ == "__main__":
+    # Get user input
+    origin, destination, vacation_days = get_user_input()
+    
+    # Print the user input to confirm
+    print(f"\nUser Input: Origin: {origin}, Destination: {destination}, Vacation Length: {vacation_days} days")
+    
+    # Start Chrome and navigate to Google Flights (still here for testing purposes)
     start_chrome()
