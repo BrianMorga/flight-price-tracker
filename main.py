@@ -3,6 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
+from datetime import datetime, timedelta
 
 def start_chrome():
     # Set up Chrome options (without --headless to see the browser)
@@ -24,6 +25,20 @@ def start_chrome():
     
     # Close the browser
     driver.quit()
+
+def generate_date_ranges(vacation_days: int):
+    today = datetime.today()
+    end_date = today + timedelta(days=365)  # One year from today
+    date_ranges = []
+    
+    current_departure = today
+    while current_departure <= end_date:
+        return_date = current_departure + timedelta(days=vacation_days)
+        if return_date <= end_date:
+            date_ranges.append((current_departure, return_date))
+        current_departure += timedelta(days=1)  # Move to the next possible departure date
+    
+    return date_ranges
 
 def get_user_input():
     # Prompt the user for input: origin, destination, and vacation length
