@@ -1,4 +1,6 @@
 import time
+import sqlite3
+import re
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -46,6 +48,71 @@ def insert_into_db(conn, departure_date, return_date, airline, price,flight_dura
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (departure_date, return_date, airline, price, flight_duration, dep_time, arr_time))
     conn.commit()
+
+def extract_airline_name(flight_text):
+    major_airlines = ["Delta", "United", "Spirit", "Frontier", "American", "Southwest", "WestJet",
+                      "Alaska", "JetBlue", "Hawaiian", "Allegiant", "Air Europa", "Emirates", "Key Lime Air",
+                      "Qatar Airways", "Royal Air Maroc", "Sun Country Airlines"]
+    for airline in major_airlines:
+        if airline.lower() in flight_text.lower():
+            return airline
+    return "Unknown"
+
+def scrape_top_flights(driver, departure_date, return_date, conn):
+    # List of alternative XPaths to locate the flights section
+    xpaths = [
+        '//*[@id="yDmH0d"]/c-wiz[2]/div/div[2]/c-wiz/div[1]/c-wiz/div[2]/div[2]/div[3]/div/div[2]/div[1]/ul',
+        '//*[@id="yDmH0d"]/c-wiz[2]/div/div[2]/c-wiz/div[1]/c-wiz/div[2]/div[2]/div[2]/div/div[2]/div[1]/ul'
+    ]
+
+    flights_section = None
+
+    # Try each XPath until the element is found
+    for xpath in xpaths:
+        try:
+            flights_section = WebDriverWait(driver, 1).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
+            print(f"Successfully found flights section with XPath: {xpath}")
+            break  # Exit the loop once the element is found
+        except Exception as e:
+            print(f"XPath failed: {xpath} - {e}")
+
+    if not flights_section:
+        print(f"Failed to locate the flights section for {departure_date} - {return_date}")
+        return  # Exit the function if no valid XPath works
+
+    # Locate the <ul> containing the flight information
+    try:
+        list_items = flights_section.find_elements(By.TAG_NAME, "li")
+
+        print(f"Flight details for {departure_date} to {return_date}:")
+        for idx, item in enumerate(list_items, start=1):
+            flight_text = item.text.strip()
+            print(f"{idx}. {flight_text}")
+
+            # Extract key flight details
+            try:
+                dep_time = re.search(r"(\d{1,2}:\d{2} [APM]{2})", flight_text).group(1)  # Departure time
+                arr_time = re.findall(r"(\d{1,2}:\d{2} [APM]{2})", flight_text)[-1]  # Arrival time
+                airline_name = extract_airline_name(flight_text)  # Extract airline name
+                flight_duration = re.search(r"(\d+ hr \d+ min|\d+ hr|\d+ min)", flight_text).group(1)  # Duration
+                # Extract price and remove commas
+                price_match = re.search(r"\$([\d,]+)", flight_text)
+                if price_match:
+                    price = int(price_match.group(1).replace(",", ""))  # Remove commas and convert to INT
+                else:
+                    price = None  # Handle cases where price is not found
+
+                # Insert into the database
+                insert_into_db(conn, departure_date, return_date, airline_name, price, flight_duration, dep_time, arr_time)
+                print(f"Inserted: {airline_name}, {dep_time} - {arr_time}, {flight_duration}, ${price}")
+
+            except AttributeError:
+                print(f"Could not parse flight details for item {idx}: {flight_text}")
+
+    except Exception as e:
+        print(f"Error parsing flight details: {e}")
 
 # Get user inputs
 departure_city = input("Enter the departure city (e.g., LAX): ")
@@ -126,6 +193,7 @@ for departure_date, return_date in date_ranges:
     time.sleep(.5)
     webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()
     time.sleep(1)
+    scrape_top_flights(driver, departure_date, return_date, conn)
 
 # Keep the browser open for further actions
 time.sleep(30)
