@@ -21,6 +21,31 @@ def generate_date_ranges(vacation_days: int):
 
     return date_ranges
 
+def setup_database():
+    conn = sqlite3.connect("flights.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS flights (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            departure_date TEXT,
+            return_date TEXT,
+            airline TEXT,
+            price INT,
+            flight_duration TEXT,
+            departure_time TEXT,
+            arrival_time TEXT
+        )
+    """)
+    conn.commit()
+    return conn
+
+def insert_into_db(conn, departure_date, return_date, airline, price,flight_duration, dep_time, arr_time):
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO flights (departure_date, return_date, airline, price, flight_duration,departure_time, arrival_time)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (departure_date, return_date, airline, price, flight_duration, dep_time, arr_time))
+    conn.commit()
 
 # Get user inputs
 departure_city = input("Enter the departure city (e.g., LAX): ")
@@ -29,6 +54,9 @@ vacation_days = int(input("Enter the number of days for vacation: "))
 
 # Generate date ranges
 date_ranges = generate_date_ranges(vacation_days)
+
+# Setup database
+conn = setup_database()
 
 # Set up the WebDriver
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
