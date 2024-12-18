@@ -122,8 +122,24 @@ vacation_days = int(input("Enter the number of days for vacation: "))
 # Generate date ranges
 date_ranges = generate_date_ranges(vacation_days)
 
+def delete_all_records():
+    # Connect to the database
+    conn = sqlite3.connect("flights.db")
+    cursor = conn.cursor()
+
+    # Execute the DELETE query
+    cursor.execute("DELETE FROM flights")
+
+    # Commit changes and close the connection
+    conn.commit()
+    conn.close()
+    print("All records deleted successfully.")
+
 # Setup database
 conn = setup_database()
+
+# Delete all existing records
+delete_all_records()
 
 # Set up the WebDriver
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
