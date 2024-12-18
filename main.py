@@ -6,11 +6,12 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-
 def generate_date_ranges(vacation_days: int):
-    start_date = datetime(2025, 1, 1)  # Start from January 1, 2025
+    start_date = datetime(2025, 1, 1)
     end_date = start_date + timedelta(days=365)  # One year from the starting date
     date_ranges = []
 
@@ -80,9 +81,9 @@ def scrape_top_flights(driver, departure_date, return_date, conn):
 
     if not flights_section:
         print(f"Failed to locate the flights section for {departure_date} - {return_date}")
-        return  # Exit the function if no valid XPath works
+        return
 
-    # Locate the <ul> containing the flight information
+    # Locate the flight information
     try:
         list_items = flights_section.find_elements(By.TAG_NAME, "li")
 
@@ -102,7 +103,7 @@ def scrape_top_flights(driver, departure_date, return_date, conn):
                 if price_match:
                     price = int(price_match.group(1).replace(",", ""))  # Remove commas and convert to INT
                 else:
-                    price = None  # Handle cases where price is not found
+                    price = None
 
                 # Insert into the database
                 insert_into_db(conn, departure_date, return_date, airline_name, price, flight_duration, dep_time, arr_time)
@@ -113,6 +114,7 @@ def scrape_top_flights(driver, departure_date, return_date, conn):
 
     except Exception as e:
         print(f"Error parsing flight details: {e}")
+
 
 # Get user inputs
 departure_city = input("Enter the departure city (e.g., LAX): ")
@@ -146,7 +148,7 @@ driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
 # Open Google Flights
 driver.get("https://www.google.com/flights")
-time.sleep(2)
+time.sleep(.7)
 
 # Input departure location
 departure_location = driver.find_element(By.XPATH, "//div[@id='i23']/div/div/div/div/div/div/input")
@@ -154,65 +156,61 @@ departure_location.clear()
 departure_location.send_keys(departure_city)
 
 # Wait for suggestions to load
-time.sleep(.5)
+time.sleep(.2)
 webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()  # Press Tab
-time.sleep(.5)
+time.sleep(.2)
 webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()  # Press Tab
 
 # Input destination location
-time.sleep(.5)
+time.sleep(.2)
 webdriver.ActionChains(driver).send_keys(destination_city).perform()
-time.sleep(.5)
+time.sleep(.2)
 webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()  # Press Tab
-time.sleep(.5)
+time.sleep(.2)
 webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()  # Press Tab
-time.sleep(1)
+time.sleep(.2)
 # Input date range (taking the first range as an example)
 departure_date, return_date = date_ranges[0]
 webdriver.ActionChains(driver).send_keys(departure_date).perform()
-time.sleep(.5)
+time.sleep(.2)
 webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()
-time.sleep(.5)
+time.sleep(.2)
 webdriver.ActionChains(driver).send_keys(return_date).perform()
 webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()  # Press Tab
 webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()  # Press Tab
 webdriver.ActionChains(driver).send_keys(Keys.ENTER).perform()  # Press ENTER
 
 # Submit the search
-time.sleep(.5)
+time.sleep(.2)
 webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()  # Move to the search button
-time.sleep(.5)
+time.sleep(.2)
 webdriver.ActionChains(driver).send_keys(Keys.ENTER).perform()  # Press Enter
-time.sleep(.5)
+time.sleep(.2)
 webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-time.sleep(.5)
+time.sleep(.2)
 webdriver.ActionChains(driver).send_keys(Keys.ENTER).perform()
-time.sleep(.5)
+time.sleep(.2)
 
 for departure_date, return_date in date_ranges:
     # Click the departure date box
     new_departure_date = driver.find_element(By.CSS_SELECTOR,
                                              "#yDmH0d > c-wiz.zQTmif.SSPGKf > div > div:nth-child(2) > c-wiz > div.cKvRXe > c-wiz > div.PSZ8D.EA71Tc > div.Ep1EJd > div > div.rIZzse > div.bgJkKe.K0Tsu > div > div > div.cQnuXe.k0gFV > div > div > div:nth-child(1) > div > div.GYgkab.YICvqf.kStSsc.ieVaIb > div > input")
     new_departure_date.click()
-    time.sleep(.5)
+    time.sleep(.2)
 
     # Enter the departure date
     webdriver.ActionChains(driver).send_keys(departure_date).perform()
-    time.sleep(.5)
+    time.sleep(.2)
     webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()  # Move to the return date field
-    time.sleep(.5)
-
+    time.sleep(.2)
     # Enter the return date
     webdriver.ActionChains(driver).send_keys(return_date).perform()
-    time.sleep(.5)
+    time.sleep(.2)
     webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()  # Update the page
-    time.sleep(.5)
+    time.sleep(.2)
     webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()
     time.sleep(1)
-    scrape_top_flights(driver, departure_date, return_date, conn)
-
-# Keep the browser open for further actions
-time.sleep(30)
+    scrape_top_flights(driver, departure_date,return_date,conn)
 
 # Close the browser
-# driver.quit()
+driver.quit()
